@@ -1,5 +1,6 @@
 import os
 import glob
+import shutil
 import numpy as np
 import torch
 import torch.nn as nn
@@ -131,8 +132,8 @@ def validation(model, device, optimizer, test_loader, inverse_normalize):
             # all_mu.extend(mu.data.cpu().numpy())
             # all_logvar.extend(logvar.data.cpu().numpy())
 
-            X_orgs.extend(inverse_normalize(X).data.cpu()[0:2])
             X_recons.extend(inverse_normalize(X_reconst).data.cpu()[0:2])
+            X_orgs.extend(inverse_normalize(X).data.cpu()[0:2])
 
     test_loss /= len(test_loader)
     # all_y = np.stack(all_y, axis=0)
@@ -401,18 +402,21 @@ def main(args):
         # np.save(os.path.join(save_model_path, 'y_cifar10_train_epoch{}.npy'.format(epoch + 1)), y_train)
         # np.save(os.path.join(save_model_path, 'z_cifar10_train_epoch{}.npy'.format(epoch + 1)), z_train)
 
-        if ((epoch+1)%50) == 0:
+        if ((epoch+1)%100) == 0:
 
-            Experiment_Name = args.arch+'_epoch_'+str(args.epochs)+"_lr"+str(args.lr)+"_batch"+str(args.batch_size)+'_version'+args.version
-                
-            ## only save the best model 
+            ### save model checkpoints
+            checkpoint_name = "ResNetVAE_"+'lr_'+str(args.lr)+'_batch_size_'+str(args.batch_size)+'_epoch_'+str(epoch)+'_version_'+args.version+'_checkpoint.pth.tar'
+            if not os.path.exists(os.path.join(args.save_dir,args.dataset_name)):
+                os.makedirs(os.path.join(os.path.join(args.save_dir,args.dataset_name)))
+
             save_checkpoint({
-                'epoch': epoch + 1,
-                'arch': args.arch,
-                'state_dict': resnet_vae.resnet.state_dict(),
-                'optimizer' : optimizer.state_dict(),
-                'scheduler' : scheduler.state_dict()
-            }, is_best = None, experiment_name = Experiment_Name,filename= "checkpoint.pth.tar")
+                'epoch': epoch,
+                'arch': 'resnet18',
+                'state_dict': resnet_vae.module.backbone.state_dict(),
+                'optimizer': optimizer.state_dict(),
+            }, is_best=False, filename=os.path.join(args.save_dir,args.dataset_name,checkpoint_name))
+
+
 
         run["train/loss"].log(train_losses)
         run["test/loss"].log(epoch_test_loss)
@@ -432,11 +436,10 @@ def main(args):
         plt.close()
     
 
-def save_checkpoint(state, is_best, experiment_name, filename='checkpoint.pth.tar'):
-    
-    if not os.path.exists(os.path.join(args.save_dir, args.dataset, experiment_name)):
-        os.makedirs(os.path.join(args.save_dir, args.dataset, experiment_name))
-    torch.save(state, os.path.join(args.save_dir, args.dataset, experiment_name, filename))
+def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
+    torch.save(state, filename)
+    if is_best:
+        shutil.copyfile(filename, 'model_best.pth.tar')
 
 
 
