@@ -64,7 +64,7 @@ class ResNet_VAE(nn.Module):
         self.pd1, self.pd2, self.pd3, self.pd4 = (0, 0), (0, 0), (0, 0), (0, 0)  # 2d padding
 
         # encoding components
-        resnet = models.resnet18(pretrained=True)
+        resnet = models.resnet18(pretrained=False)
         modules = list(resnet.children())[:-1]      # delete the last fc layer.
         self.resnet = nn.Sequential(*modules)
         self.fc1 = nn.Linear(resnet.fc.in_features, self.fc_hidden1)

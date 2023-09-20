@@ -486,6 +486,9 @@ if __name__ == "__main__":
         
 
     args = parser.parse_args()
+    params = vars(args)
+    run["parameters"] = params
+    run["all files"].upload_files("*.py")
         
     if args.use_gpu:
         device = 'cuda:'+args.gpu_id if torch.cuda.is_available() else 'cpu'
