@@ -402,19 +402,19 @@ def main(args):
         # np.save(os.path.join(save_model_path, 'y_cifar10_train_epoch{}.npy'.format(epoch + 1)), y_train)
         # np.save(os.path.join(save_model_path, 'z_cifar10_train_epoch{}.npy'.format(epoch + 1)), z_train)
 
-        if ((epoch+1)%100) == 0:
+        if ((epoch+1)%50) == 0:
 
             ### save model checkpoints
             checkpoint_name = "ResNetVAE_"+'lr_'+str(args.lr)+'_batch_size_'+str(args.batch_size)+'_epoch_'+str(epoch)+'_version_'+args.version+'_checkpoint.pth.tar'
-            if not os.path.exists(os.path.join(args.save_dir,args.dataset_name)):
-                os.makedirs(os.path.join(os.path.join(args.save_dir,args.dataset_name)))
+            if not os.path.exists(os.path.join(args.save_dir,args.dataset)):
+                os.makedirs(os.path.join(os.path.join(args.save_dir,args.dataset)))
 
             save_checkpoint({
                 'epoch': epoch,
-                'arch': 'resnet18',
-                'state_dict': resnet_vae.module.backbone.state_dict(),
+                'arch': args.arch,
+                'state_dict': resnet_vae.resnet.state_dict(),
                 'optimizer': optimizer.state_dict(),
-            }, is_best=False, filename=os.path.join(args.save_dir,args.dataset_name,checkpoint_name))
+            }, is_best=False, filename=os.path.join(args.save_dir,args.dataset,checkpoint_name))
 
 
 
