@@ -60,8 +60,8 @@ def check_mkdir(dir_name):
 
 def loss_function(recon_x, x, mu, logvar):
     # MSE = F.mse_loss(recon_x, x, reduction='mean')
-    MSE = F.binary_cross_entropy(recon_x, x, reduction='sum')
-    KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
+    MSE = F.binary_cross_entropy(recon_x, x, reduction='mean')
+    KLD = -0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
     return MSE + KLD
 
 
@@ -405,7 +405,7 @@ def main(args):
         if ((epoch+1)%50) == 0:
 
             ### save model checkpoints
-            checkpoint_name = "ResNetVAE_"+'lr_'+str(args.lr)+'_batch_size_'+str(args.batch_size)+'_epoch_'+str(epoch)+'_version_'+args.version+'_checkpoint.pth.tar'
+            checkpoint_name = "ResNetVAE_"+'lr_'+str(args.lr)+'_batch_size_'+str(args.batch_size)+'_epoch_'+str(epoch)+'_version_'+args.version+'_mean_loss_checkpoint.pth.tar'
             if not os.path.exists(os.path.join(args.save_dir,args.dataset)):
                 os.makedirs(os.path.join(os.path.join(args.save_dir,args.dataset)))
 
