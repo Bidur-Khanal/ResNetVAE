@@ -62,7 +62,7 @@ def loss_function(recon_x, x, mu, logvar, args):
     # MSE = F.mse_loss(recon_x, x, reduction='mean')
     MSE = F.binary_cross_entropy(recon_x, x, reduction='mean')
     KLD = -0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
-    return MSE + args.beta * KLD
+    return MSE + args.beta * KLD, MSE, KLD
 
 
 def train(log_interval, model, device, train_loader, optimizer, epoch, args):
@@ -70,6 +70,8 @@ def train(log_interval, model, device, train_loader, optimizer, epoch, args):
     model.train()
 
     losses = []
+    mse_losses = []
+    kld_losses = []
     all_y, all_z, all_mu, all_logvar = [], [], [], []
     N_count = 0   # counting total trained sample in one epoch
     for batch_idx, (X, y) in enumerate(train_loader):
@@ -79,8 +81,10 @@ def train(log_interval, model, device, train_loader, optimizer, epoch, args):
 
         optimizer.zero_grad()
         X_reconst, z, mu, logvar = model(X)  # VAE
-        loss = loss_function(X_reconst, X, mu, logvar, args)
+        loss, mse, kld = loss_function(X_reconst, X, mu, logvar, args)
         losses.append(loss.item())
+        mse_losses.append(mse.item())
+        kld_losses.append(kld.item())
 
         loss.backward()
         optimizer.step()
@@ -107,7 +111,7 @@ def train(log_interval, model, device, train_loader, optimizer, epoch, args):
     # torch.save(optimizer.state_dict(), os.path.join(save_model_path, 'optimizer_epoch{}.pth'.format(epoch + 1)))      # save optimizer
     # print("Epoch {} model saved!".format(epoch + 1))
 
-    return X_reconst.data.cpu().numpy(), all_y, all_z, all_mu, all_logvar, np.mean(losses)
+    return X_reconst.data.cpu().numpy(), all_y, all_z, all_mu, all_logvar, np.mean(losses), np.mean(mse_losses), np.mean(kld_losses)
 
 
 def validation(model, device, optimizer, test_loader, inverse_normalize, args):
@@ -115,6 +119,8 @@ def validation(model, device, optimizer, test_loader, inverse_normalize, args):
     model.eval()
 
     test_loss = 0
+    test_mse = 0.
+    test_kld = 0.
     all_y, all_z, all_mu, all_logvar = [], [], [], []
     X_orgs = []
     X_recons = []
@@ -124,8 +130,10 @@ def validation(model, device, optimizer, test_loader, inverse_normalize, args):
             X, y = X.to(device), y.to(device).view(-1, )
             X_reconst, z, mu, logvar = model(X)
 
-            loss = loss_function(X_reconst, X, mu, logvar, args)
+            loss, mse, kld = loss_function(X_reconst, X, mu, logvar, args)
             test_loss += loss.item()  # sum up batch loss
+            test_mse += mse.item()
+            test_kld += kld.item()
 
             # all_y.extend(y.data.cpu().numpy())
             # all_z.extend(z.data.cpu().numpy())
@@ -136,6 +144,8 @@ def validation(model, device, optimizer, test_loader, inverse_normalize, args):
             X_orgs.extend(inverse_normalize(X).data.cpu()[0:2])
 
     test_loss /= len(test_loader)
+    test_mse /= len(test_loader)
+    test_kld /= len(test_loader)
     # all_y = np.stack(all_y, axis=0)
     # all_z = np.stack(all_z, axis=0)
     # all_mu = np.stack(all_mu, axis=0)
@@ -143,7 +153,7 @@ def validation(model, device, optimizer, test_loader, inverse_normalize, args):
 
     # show information
     print('\nTest set ({:d} samples): Average loss: {:.4f}\n'.format(len(test_loader.dataset), test_loss))
-    return X_reconst.data.cpu().numpy(), all_y, all_z, all_mu, all_logvar, test_loss, torch.stack(X_orgs), torch.stack(X_recons)
+    return X_reconst.data.cpu().numpy(), all_y, all_z, all_mu, all_logvar, test_loss, torch.stack(X_orgs), torch.stack(X_recons), test_mse, test_kld
 
 
 
@@ -384,8 +394,8 @@ def main(args):
     # start training
     for epoch in range(epochs):
         # train, test model
-        X_reconst_train, y_train, z_train, mu_train, logvar_train, train_losses = train(log_interval, resnet_vae, device, trainloader, optimizer, epoch, args)
-        X_reconst_test, y_test, z_test, mu_test, logvar_test, epoch_test_loss, X_org, X_recons = validation(resnet_vae, device, optimizer, testloader,invnormalize, args)
+        X_reconst_train, y_train, z_train, mu_train, logvar_train, train_losses, train_mse_loss, train_kld_loss = train(log_interval, resnet_vae, device, trainloader, optimizer, epoch, args)
+        X_reconst_test, y_test, z_test, mu_test, logvar_test, epoch_test_loss, X_org, X_recons, test_mse_loss, test_kld_loss = validation(resnet_vae, device, optimizer, testloader,invnormalize, args)
         scheduler.step()
 
         # save results
@@ -420,6 +430,10 @@ def main(args):
 
         run["train/loss"].log(train_losses)
         run["test/loss"].log(epoch_test_loss)
+        run["train/mse_loss"].log(train_mse_loss)
+        run["test/mse_loss"].log(test_mse_loss)
+        run["train/kld_loss"].log(train_kld_loss)
+        run["test/kld_loss"].log(test_kld_loss)
         n_row = int(np.sqrt(X_org.shape[0]))
 
         
