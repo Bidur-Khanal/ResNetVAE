@@ -3,7 +3,7 @@
 dir="sbatch_log"
 job_File="sbatch_run.sh" 
 dataset=$"histopathology"
-epochs=$"600"
+epochs=$"200"
 
 
 for batch in 512 
@@ -20,7 +20,7 @@ do
             export epochs;
             export version;
             export dataset;
-            sbatch -J $EXPT -o $STD -t 02-23:00:00 -e $ERR $job_File
+            sbatch -J $EXPT -o $STD -t 00-23:00:00 -e $ERR $job_File
         done;
     done;
 done;

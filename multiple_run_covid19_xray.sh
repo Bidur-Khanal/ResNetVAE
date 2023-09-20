@@ -2,8 +2,8 @@
 
 dir="sbatch_log"
 job_File="sbatch_run.sh" 
-dataset=$"COVID19_Xray"
-epochs=$"600"
+dataset=$"covid19_xray"
+epochs=$"300"
 
 
 for batch in 512 
@@ -12,15 +12,15 @@ do
     do 
         for version in 1 2
         do
-            EXPT=VAE_COVID19_Xray_"$lr"_"$batch"_"$epochs"_"$version"
-            STD=$dir/STD_VAE_COVID19_Xray_"$lr"_"$batch"_"$epochs"_"$version".out
-            ERR=$dir/ERR_VAE_COVID19_Xray_"$lr"_"$batch"_"$epochs"_"$version".err
+            EXPT=VAE_covid19_xray_"$lr"_"$batch"_"$epochs"_"$version"
+            STD=$dir/STD_VAE_covid19_xray_"$lr"_"$batch"_"$epochs"_"$version".out
+            ERR=$dir/ERR_VAE_covid19_xray_"$lr"_"$batch"_"$epochs"_"$version".err
             export lr;
             export batch;
             export epochs;
             export version;
             export dataset;
-            sbatch -J $EXPT -o $STD -t 02-23:00:00 -e $ERR $job_File
+            sbatch -J $EXPT -o $STD -t 00-12:00:00 -e $ERR $job_File
         done;
     done;
 done;
