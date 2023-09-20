@@ -58,14 +58,14 @@ def check_mkdir(dir_name):
         os.mkdir(dir_name)
 
 
-def loss_function(recon_x, x, mu, logvar):
+def loss_function(recon_x, x, mu, logvar, args):
     # MSE = F.mse_loss(recon_x, x, reduction='mean')
     MSE = F.binary_cross_entropy(recon_x, x, reduction='mean')
     KLD = -0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
-    return MSE + KLD
+    return MSE + args.beta * KLD
 
 
-def train(log_interval, model, device, train_loader, optimizer, epoch):
+def train(log_interval, model, device, train_loader, optimizer, epoch, args):
     # set model as training mode
     model.train()
 
@@ -79,7 +79,7 @@ def train(log_interval, model, device, train_loader, optimizer, epoch):
 
         optimizer.zero_grad()
         X_reconst, z, mu, logvar = model(X)  # VAE
-        loss = loss_function(X_reconst, X, mu, logvar)
+        loss = loss_function(X_reconst, X, mu, logvar, args)
         losses.append(loss.item())
 
         loss.backward()
@@ -110,7 +110,7 @@ def train(log_interval, model, device, train_loader, optimizer, epoch):
     return X_reconst.data.cpu().numpy(), all_y, all_z, all_mu, all_logvar, np.mean(losses)
 
 
-def validation(model, device, optimizer, test_loader, inverse_normalize):
+def validation(model, device, optimizer, test_loader, inverse_normalize, args):
     # set model as testing mode
     model.eval()
 
@@ -124,7 +124,7 @@ def validation(model, device, optimizer, test_loader, inverse_normalize):
             X, y = X.to(device), y.to(device).view(-1, )
             X_reconst, z, mu, logvar = model(X)
 
-            loss = loss_function(X_reconst, X, mu, logvar)
+            loss = loss_function(X_reconst, X, mu, logvar, args)
             test_loss += loss.item()  # sum up batch loss
 
             # all_y.extend(y.data.cpu().numpy())
@@ -384,8 +384,8 @@ def main(args):
     # start training
     for epoch in range(epochs):
         # train, test model
-        X_reconst_train, y_train, z_train, mu_train, logvar_train, train_losses = train(log_interval, resnet_vae, device, trainloader, optimizer, epoch)
-        X_reconst_test, y_test, z_test, mu_test, logvar_test, epoch_test_loss, X_org, X_recons = validation(resnet_vae, device, optimizer, testloader,invnormalize)
+        X_reconst_train, y_train, z_train, mu_train, logvar_train, train_losses = train(log_interval, resnet_vae, device, trainloader, optimizer, epoch, args)
+        X_reconst_test, y_test, z_test, mu_test, logvar_test, epoch_test_loss, X_org, X_recons = validation(resnet_vae, device, optimizer, testloader,invnormalize, args)
         scheduler.step()
 
         # save results
@@ -485,6 +485,8 @@ if __name__ == "__main__":
     parser.add_argument('--gpu_id', type =str , default= '0',
                         help='select a gpu id')
     parser.add_argument('--version', default = "1", type = str)
+    parser.add_argument('--beta', default=0.1, type=float, metavar='M',
+                        help='beta term that weights KLD loss term')
 
         
 
