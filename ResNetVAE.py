@@ -401,7 +401,7 @@ def main(args):
         # np.save(os.path.join(save_model_path, 'y_cifar10_train_epoch{}.npy'.format(epoch + 1)), y_train)
         # np.save(os.path.join(save_model_path, 'z_cifar10_train_epoch{}.npy'.format(epoch + 1)), z_train)
 
-        if ((epoch+1)%50) == 0:
+        if ((epoch+1)%100) == 0:
 
             Experiment_Name = args.arch+'_epoch_'+str(args.epochs)+"_lr"+str(args.lr)+"_batch"+str(args.batch_size)+'_version'+args.version
                 
