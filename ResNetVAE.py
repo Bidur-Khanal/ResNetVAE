@@ -59,7 +59,7 @@ def check_mkdir(dir_name):
 
 
 def loss_function(recon_x, x, mu, logvar, args):
-    # MSE = F.mse_loss(recon_x, x, reduction='mean')
+    #MSE = F.mse_loss(recon_x, x, reduction='mean')
     MSE = F.binary_cross_entropy(recon_x, x, reduction='mean')
     KLD = -0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
     return MSE + args.beta * KLD, MSE, KLD
@@ -390,6 +390,9 @@ def main(args):
     # record training process
     epoch_train_losses = []
     epoch_test_losses = []
+
+    best_loss = 100000.
+    
     
     # start training
     for epoch in range(epochs):
@@ -412,10 +415,26 @@ def main(args):
         # np.save(os.path.join(save_model_path, 'y_cifar10_train_epoch{}.npy'.format(epoch + 1)), y_train)
         # np.save(os.path.join(save_model_path, 'z_cifar10_train_epoch{}.npy'.format(epoch + 1)), z_train)
 
+        
+       
+        if epoch_test_loss < best_loss:
+            ### save model checkpoints
+            best_checkpoint_name = "ResNetVAE_"+'lr_'+str(args.lr)+'_batch_size_'+str(args.batch_size)+'_version_'+args.version+'_beta_'+str(args.beta)+'_mean_loss_best_checkpoint.pth.tar'
+            if not os.path.exists(os.path.join(args.save_dir,args.dataset)):
+                os.makedirs(os.path.join(os.path.join(args.save_dir,args.dataset)))
+
+            save_checkpoint({
+                'epoch': epoch,
+                'arch': args.arch,
+                'state_dict': resnet_vae.resnet.state_dict(),
+                'optimizer': optimizer.state_dict(),
+            }, is_best=False, filename=os.path.join(args.save_dir,args.dataset,best_checkpoint_name))
+
+
         if ((epoch+1)%50) == 0:
 
             ### save model checkpoints
-            checkpoint_name = "ResNetVAE_"+'lr_'+str(args.lr)+'_batch_size_'+str(args.batch_size)+'_epoch_'+str(epoch)+'_version_'+args.version+'_mean_loss_checkpoint.pth.tar'
+            checkpoint_name = "ResNetVAE_"+'lr_'+str(args.lr)+'_batch_size_'+str(args.batch_size)+'_epoch_'+str(epoch)+'_version_'+args.version+'_beta_'+str(args.beta)+'_mean_loss_checkpoint.pth.tar'
             if not os.path.exists(os.path.join(args.save_dir,args.dataset)):
                 os.makedirs(os.path.join(os.path.join(args.save_dir,args.dataset)))
 
@@ -425,7 +444,6 @@ def main(args):
                 'state_dict': resnet_vae.resnet.state_dict(),
                 'optimizer': optimizer.state_dict(),
             }, is_best=False, filename=os.path.join(args.save_dir,args.dataset,checkpoint_name))
-
 
 
         run["train/loss"].log(train_losses)
